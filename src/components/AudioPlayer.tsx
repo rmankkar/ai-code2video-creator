@@ -11,12 +11,22 @@ interface AudioPlayerProps {
 }
 
 /**
- * AudioPlayer - Plays the correct audio segment for the current frame
- * Each scene has its own audio file that plays during its frame range
- * All Audio components must be rendered for Remotion to include them in the output
- * Uses staticFile() to get the correct URL for public folder assets
+ * AudioPlayer - Plays the concatenated narration audio
+ * Uses a single audio file that spans the entire video duration
  */
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({ manifest }) => {
+  // Use the full concatenated audio if available, otherwise fall back to segments
+  if (manifest.fullAudioPath) {
+    return (
+      <Audio
+        src={staticFile(manifest.fullAudioPath)}
+        startFrom={0}
+        playbackRate={1}
+      />
+    );
+  }
+
+  // Fallback: play individual segments (legacy)
   return (
     <>
       {manifest.segments.map((segment: AudioSegment) => (
@@ -59,6 +69,17 @@ export const AudioPlayerWithVolume: React.FC<AudioPlayerWithVolumeProps> = ({
   manifest,
   volume = 1
 }) => {
+  if (manifest.fullAudioPath) {
+    return (
+      <Audio
+        src={staticFile(manifest.fullAudioPath)}
+        startFrom={0}
+        playbackRate={1}
+        volume={volume}
+      />
+    );
+  }
+
   return (
     <>
       {manifest.segments.map((segment: AudioSegment) => (

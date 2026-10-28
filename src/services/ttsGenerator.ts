@@ -32,7 +32,8 @@ const DEFAULT_TTS_OPTIONS: TTSOptions = {
 function generateSceneAudio(
   scene: ScriptScene,
   sceneIndex: number,
-  options: TTSOptions
+  options: TTSOptions,
+  previousEndFrame: number = 0
 ): AudioSegment {
   const { voice, rate, outputDir } = options;
 
@@ -96,10 +97,11 @@ function generateSceneAudio(
     durationMs = Math.round(parseFloat(probeResult.stdout.trim()) * 1000);
   }
 
-  // Calculate frame timing based on actual audio duration
+  // Calculate frame timing based on ACTUAL audio duration
+  // Chain scenes sequentially: each starts where previous ended
   const fps = VIDEO_CONFIG.fps;
-  const startFrame = scene.startFrame;
-  const endFrame = Math.min(scene.endFrame, startFrame + Math.ceil(durationMs / 1000 * fps));
+  const startFrame = previousEndFrame;
+  const endFrame = startFrame + Math.ceil(durationMs / 1000 * fps);
 
   // Return relative path for web serving
   const relativePath = `/audio/${basename(mp3Path)}`;
@@ -119,6 +121,33 @@ function generateSceneAudio(
 /**
  * Generate audio for all scenes in a script
  */
+/**
+ * Concatenate multiple audio files into a single file using ffmpeg
+ */
+function concatenateAudioFiles(mp3Paths: string[], outputPath: string): void {
+  // Create a concat file list for ffmpeg
+  const concatListPath = resolve(dirname(outputPath), 'concat-list.txt');
+  const concatContent = mp3Paths.map(p => `file '${p}'`).join('\n');
+  writeFileSync(concatListPath, concatContent);
+
+  // Use ffmpeg concat demuxer to join files without re-encoding
+  const concatResult = spawnSync('ffmpeg', [
+    '-y',
+    '-f', 'concat',
+    '-safe', '0',
+    '-i', concatListPath,
+    '-c', 'copy',
+    outputPath
+  ], { encoding: 'utf-8' });
+
+  if (concatResult.status !== 0) {
+    throw new Error(`Audio concatenation failed: ${concatResult.stderr}`);
+  }
+
+  // Clean up concat list
+  try { spawnSync('rm', [concatListPath]); } catch { /* ignore */ }
+}
+
 export async function generateAudioForScript(
   scenes: ScriptScene[],
   options: Partial<TTSOptions> = {}
@@ -127,28 +156,55 @@ export async function generateAudioForScript(
   const filteredOptions: Partial<TTSOptions> = {};
   for (const [key, value] of Object.entries(options)) {
     if (value !== undefined) {
-      // Use type assertion with proper key type
       (filteredOptions as Record<keyof TTSOptions, unknown>)[key as keyof TTSOptions] = value;
     }
   }
   const mergedOptions: TTSOptions = { ...DEFAULT_TTS_OPTIONS, ...filteredOptions };
   const segments: AudioSegment[] = [];
   let totalDurationMs = 0;
+  let previousEndFrame = 0;
+  const mp3Paths: string[] = [];
 
   console.log(`\n🎙️  Generating narration audio for ${scenes.length} scenes...`);
   console.log(`   Voice: ${mergedOptions.voice}, Rate: ${mergedOptions.rate} wpm`);
 
   for (let i = 0; i < scenes.length; i++) {
-    const segment = generateSceneAudio(scenes[i], i, mergedOptions);
+    const segment = generateSceneAudio(scenes[i], i, mergedOptions, previousEndFrame);
     segments.push(segment);
     totalDurationMs += segment.durationMs;
+    previousEndFrame = segment.endFrame;
+    // Store the full path for concatenation
+    mp3Paths.push(resolve(mergedOptions.outputDir, basename(segment.audioPath)));
   }
 
+  // Concatenate all scene audio into a single file
+  const timestamp = Date.now();
+  const concatMp3Path = resolve(mergedOptions.outputDir, `full-narration-${timestamp}.mp3`);
+  console.log(`🔗 Concatenating ${mp3Paths.length} audio files...`);
+  concatenateAudioFiles(mp3Paths, concatMp3Path);
+
+  // Verify concatenated file duration
+  const probeResult = spawnSync('ffprobe', [
+    '-v', 'error',
+    '-show_entries', 'format=duration',
+    '-of', 'default=noprint_wrappers=1:nokey=1',
+    concatMp3Path
+  ], { encoding: 'utf-8' });
+
+  let concatDurationMs = totalDurationMs;
+  if (probeResult.status === 0 && probeResult.stdout.trim()) {
+    concatDurationMs = Math.round(parseFloat(probeResult.stdout.trim()) * 1000);
+  }
+  console.log(`   ✅ Concatenated: ${basename(concatMp3Path)} - ${concatDurationMs}ms`);
+
+  // Create manifest with single concatenated audio file
+  // Keep segments for caption timing, but add a fullAudioPath
   const manifest: AudioManifest = {
     scriptVersion: '1.0.0',
     generatedAt: new Date().toISOString(),
     segments,
-    totalDurationMs,
+    totalDurationMs: concatDurationMs,
+    fullAudioPath: `/audio/${basename(concatMp3Path)}`,
   };
 
   // Save manifest JSON
@@ -168,9 +224,10 @@ export default manifest;
   writeFileSync(manifestTsPath, manifestTsContent);
 
   console.log(`\n📊 Audio generation complete:`);
-  console.log(`   Total duration: ${(totalDurationMs / 1000).toFixed(1)}s`);
+  console.log(`   Total duration: ${(concatDurationMs / 1000).toFixed(1)}s`);
   console.log(`   Manifest saved: ${manifestPath}`);
   console.log(`   Module saved: ${manifestTsPath}`);
+  console.log(`   Full audio: ${manifest.fullAudioPath}`);
 
   return validateAudioManifest(manifest);
 }

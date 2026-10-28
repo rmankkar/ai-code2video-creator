@@ -66,6 +66,7 @@ export const AudioManifestSchema = z.object({
   generatedAt: z.string().datetime(),
   segments: z.array(AudioSegmentSchema),
   totalDurationMs: z.number().positive(),
+  fullAudioPath: z.string().optional(), // Single concatenated audio file
 });
 
 export type AudioManifest = z.infer<typeof AudioManifestSchema>;

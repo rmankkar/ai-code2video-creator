@@ -23,6 +23,7 @@ const defaultProps: CompositionProps = {
 };
 
 // Calculate metadata from generated config
+// Use audio manifest total duration for video length (so audio plays fully)
 const calculateMetadata: CalculateMetadataFunction<CompositionProps> = () => {
   const video = generatedConfig.video ?? {
     durationInFrames: sampleScript.durationFrames,
@@ -30,8 +31,16 @@ const calculateMetadata: CalculateMetadataFunction<CompositionProps> = () => {
     width: sampleScript.width,
     height: sampleScript.height,
   };
+
+  // Override duration from audio manifest if available
+  let durationInFrames = video.durationInFrames;
+  if (generatedConfig.audioManifest?.totalDurationMs) {
+    const fps = video.fps;
+    durationInFrames = Math.ceil(generatedConfig.audioManifest.totalDurationMs / 1000 * fps);
+  }
+
   return {
-    durationInFrames: video.durationInFrames,
+    durationInFrames,
     fps: video.fps,
     width: video.width,
     height: video.height,

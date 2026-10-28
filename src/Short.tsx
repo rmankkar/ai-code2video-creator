@@ -81,7 +81,7 @@ const fallbackScenes: ScriptScene[] = [
 
 export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
 
   // DEBUG: Visual indicator of script source
   const scriptSource = script
@@ -93,13 +93,21 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
   // Use passed script or fall back to hardcoded
   const scenes: ScriptScene[] = script?.scenes ?? fallbackScenes;
 
-  const sceneDurationFrames = VIDEO_CONFIG.sceneDurationFrames;
-  const sceneIndex = Math.min(
-    scenes.length - 1,
-    Math.floor(frame / sceneDurationFrames)
+  // Use audio manifest segments for timing if available (they have actual durations)
+  // Otherwise use script scenes' startFrame/endFrame
+  const timingSource = audioManifest?.segments?.length === scenes.length
+    ? audioManifest.segments
+    : scenes;
+
+  // Find current scene based on actual startFrame/endFrame
+  const sceneIndex = timingSource.findIndex(
+    (s) => frame >= s.startFrame && frame < s.endFrame
   );
-  const scene = scenes[sceneIndex];
-  const local = frame - scene.startFrame;
+  const safeSceneIndex = Math.max(0, Math.min(scenes.length - 1, sceneIndex));
+  const scene = scenes[safeSceneIndex];
+  const timing = timingSource[safeSceneIndex];
+  const local = frame - timing.startFrame;
+  const sceneDurationFrames = timing.endFrame - timing.startFrame;
 
   const entrance = spring({
     frame: local,
@@ -134,7 +142,7 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
   );
 
   const pulse = 1 + Math.sin(frame / 10) * 0.035;
-  const progress = ((frame + 1) / VIDEO_CONFIG.durationInFrames) * 100;
+  const progress = ((frame + 1) / durationInFrames) * 100;
 
   const transitionIn = interpolate(
     local,

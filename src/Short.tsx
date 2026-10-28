@@ -10,6 +10,8 @@ import {
 import { VideoScript, ScriptScene, AudioManifest } from "./types/script";
 import { VIDEO_CONFIG } from "./config/video";
 import { AudioPlayer } from "./components/AudioPlayer";
+import { DynamicElements } from "./components/DynamicElements";
+import logoImage from "../public/assets/pixelpulse_logo.png";
 
 interface ShortProps {
   script?: VideoScript;          // generated script passed directly (preferred)
@@ -265,29 +267,32 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
         >
           <div
             style={{
-              width: 38,
-              height: 38,
+              width: 68,
+              height: 68,
               borderRadius: 12,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "linear-gradient(135deg, #9B7BFF, #5CEBFF)",
-              color: "#080816",
+              // background: "linear-gradient(135deg, #9B7BFF, #5CEBFF)",
+              // color: "#080816",
               fontSize: 25,
               fontWeight: 900,
               boxShadow: "0 0 25px rgba(155,123,255,0.35)",
+              backgroundImage: `url(${logoImage})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
             }}
           >
-            Q
+            
           </div>
           <div
             style={{
-              fontSize: 23,
+              fontSize: 43,
               fontWeight: 800,
               letterSpacing: 2,
             }}
           >
-            QA<span style={{ color: C.cyan }}>//</span>AI
+            PixelPulse<span style={{ color: C.cyan }}>//</span>Shorts
           </div>
         </div>
 
@@ -297,11 +302,11 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
             border: "1px solid rgba(155,123,255,0.5)",
             borderRadius: 30,
             color: C.muted,
-            fontSize: 15,
+            fontSize: 24,
             letterSpacing: 2,
           }}
         >
-          TECH SERIES 01
+          TECH SERIES
         </div>
       </div>
 
@@ -328,7 +333,7 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
         />
         <div
           style={{
-            fontSize: 18,
+            fontSize: 48,
             fontWeight: 700,
             letterSpacing: 3,
             color: C.cyan,
@@ -382,7 +387,7 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
       <div
         style={{
           position: "absolute",
-          top: 520,
+          top: 20,
           left: 62,
           right: 42,
           opacity,
@@ -392,7 +397,7 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
       >
         <div
           style={{
-            fontSize: 21,
+            fontSize: 61,
             fontWeight: 700,
             color: C.muted,
             letterSpacing: 4,
@@ -415,10 +420,10 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
             <div
               key={`${sceneIndex}-${line}`}
               style={{
-                fontSize: line.length > 11 ? 69 : 91,
+                fontSize: line.length > 11 ? 99 : 101,
                 fontWeight: 900,
-                lineHeight: 1.03,
-                letterSpacing: -3,
+                lineHeight: 1.33,
+                letterSpacing: -2,
                 whiteSpace: "nowrap",
                 opacity: wordProgress,
                 transform: `translateX(${(1 - wordProgress) * -65}px)`,
@@ -436,11 +441,15 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
           );
         })}
 
-        {/* Animated underline */}
+        {/* Animated underline - uses spring for smooth, visible animation */}
         <div
           style={{
-            marginTop: 28,
-            width: `${interpolate(local, [8, 38], [0, 390], clamp)}px`,
+            marginTop: 88,
+            width: `${spring({
+              frame: local,
+              fps,
+              config: { damping: 18, stiffness: 120, mass: 0.6 },
+            }) * 390}px`,
             height: 5,
             borderRadius: 8,
             background: `linear-gradient(90deg, ${C.violet}, ${C.cyan})`,
@@ -450,10 +459,10 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
 
         <div
           style={{
-            fontSize: 28,
+            fontSize: 58,
             lineHeight: 1.45,
             color: C.muted,
-            marginTop: 30,
+            marginTop: 60,
             maxWidth: 700,
             opacity: interpolate(local, [18, 35], [0, 1], clamp),
           }}
@@ -476,16 +485,16 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
       >
         <div
           style={{
-            fontSize: 17,
+            fontSize: 27,
             color: C.muted,
             letterSpacing: 2,
           }}
         >
-          AI × QUALITY × ENGINEERING
+          TECH × GAMING × NEXT
         </div>
         <div
           style={{
-            fontSize: 18,
+            fontSize: 27,
             fontWeight: 800,
             color: C.cyan,
           }}
@@ -516,6 +525,15 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
           }}
         />
       </div>
+
+      {/* Dynamic Viral Elements — Comment Ticker, Trend Pulse, Watermark */}
+      {script && audioManifest && (
+        <DynamicElements
+          script={script}
+          audioManifest={audioManifest}
+          viralHooks={script.viralHooks}
+        />
+      )}
 
       {/* Scene transition flash */}
       <AbsoluteFill

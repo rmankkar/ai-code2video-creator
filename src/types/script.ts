@@ -23,6 +23,37 @@ export const ScriptSceneSchema = z.object({
   icon: z.string().min(1).max(2),
 });
 
+// ============================================
+// Viral Hooks Types (dynamic, inferred at render time)
+// ============================================
+
+export const ViralHooksSchema = z.object({
+  // Comment ticker: derived from narration keywords + topic
+  commentTicker: z.object({
+    enabled: z.boolean().default(true),
+    lines: z.array(z.string().max(60)).min(4).max(12),
+    speed: z.number().positive().default(30), // px per second
+  }).optional(),
+
+  // Trend pulse line: audio-reactive waveform
+  trendPulse: z.object({
+    enabled: z.boolean().default(true),
+    height: z.number().int().positive().default(4),
+    color: z.string().default('#00EBFF'),
+    samples: z.number().int().positive().default(64),
+  }).optional(),
+
+  // Creator watermark
+  watermark: z.object({
+    enabled: z.boolean().default(true),
+    handle: z.string().default('@PixelPulse'),
+    glitchInterval: z.number().int().positive().default(180), // frames
+    opacity: z.number().min(0).max(1).default(0.35),
+  }).optional(),
+});
+
+export type ViralHooks = z.infer<typeof ViralHooksSchema>;
+
 export const VideoScriptSchema = z.object({
   title: z.string().min(1).max(100),
   durationFrames: z.number().int().positive(),
@@ -37,6 +68,7 @@ export const VideoScriptSchema = z.object({
     version: z.string(),
   }),
   globalNarration: z.string().optional(), // Optional intro/outro
+  viralHooks: ViralHooksSchema.optional(), // Dynamic viral elements config
 });
 
 // ============================================

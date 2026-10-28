@@ -13,7 +13,9 @@ node_modules/.cache
 # Generated files (recreated by pipeline)
 output/
 public/audio/
+public/assets/
 src/generated/
+out
 
 # IDE
 .vscode/

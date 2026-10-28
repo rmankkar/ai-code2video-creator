@@ -12,21 +12,28 @@
     "@remotion/cli": "4.0.539",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "remotion": "4.0.539"
+    "remotion": "4.0.539",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.539",
+    "@types/node": "^26.6.5",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
     "eslint": "10.12.0",
     "prettier": "3.8.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.15",
     "typescript": "5.9.3"
   },
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "generate:script": "tsx src/cli/generateScript.ts",
+    "generate:audio": "tsx src/cli/generateAudio.ts",
+    "generate:all": "npm run generate:script && npm run generate:audio"
   },
   "allowScripts": {
     "esbuild": false

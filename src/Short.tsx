@@ -84,11 +84,11 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
   const { fps, durationInFrames } = useVideoConfig();
 
   // DEBUG: Visual indicator of script source
-  const scriptSource = script
-    ? `GENERATED: ${script.title}`
-    : scriptPath
-    ? "LOADING…"
-    : "FALLBACK";
+  // const scriptSource = script
+  //   ? `GENERATED: ${script.title}`
+  //   : scriptPath
+  //   ? "LOADING…"
+  //   : "FALLBACK";
 
   // Use passed script or fall back to hardcoded
   const scenes: ScriptScene[] = script?.scenes ?? fallbackScenes;
@@ -183,7 +183,7 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
           textOverflow: "ellipsis",
         }}
       >
-        {scriptSource}
+        {/* {scriptSource} */}
       </div>
 
       {/* Animated gradient atmosphere */}

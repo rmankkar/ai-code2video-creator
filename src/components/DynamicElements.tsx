@@ -10,7 +10,7 @@ import { VideoScript, AudioManifest, ViralHooks } from "../types/script";
 import { VIDEO_CONFIG } from "../config/video";
 
 const C = VIDEO_CONFIG.colors;
-const SAFE_BOTTOM = 400; // hard 200px bottom margin
+const SAFE_BOTTOM = VIDEO_CONFIG.safeMargin.bottom; // Use config value (200px)
 
 // Simple seeded PRNG for deterministic "randomness"
 function mulberry32(a: number) {
@@ -110,7 +110,7 @@ export const DynamicElements: React.FC<DynamicElementsProps> = ({
   }), [script, viralHooks]);
 
   // ─── Comment Ticker ───
-  const tickerY = height - SAFE_BOTTOM - 48;
+  const tickerY = height - SAFE_BOTTOM - 68;
   const tickerLines = hooks.commentTicker.enabled ? hooks.commentTicker.lines : [];
   const tickerSpeed = hooks.commentTicker.speed; // px/sec
   const tickerOffset = (frame / fps) * tickerSpeed;
@@ -216,7 +216,7 @@ export const DynamicElements: React.FC<DynamicElementsProps> = ({
             left: VIDEO_CONFIG.safeMargin.left,
             right: VIDEO_CONFIG.safeMargin.right,
             top: pulseY,
-            height: pulseHeight+50,
+            height: pulseHeight+150,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",

@@ -14,7 +14,7 @@ export const VIDEO_CONFIG = {
   // Safe margins for Instagram Reels / YouTube Shorts UI
   safeMargin: {
     top: 150,    // Avoid profile/handle area
-    bottom: 200, // Avoid caption/action bar
+    bottom: 400, // Avoid caption/action bar
     left: 60,
     right: 60,
   },

@@ -16,6 +16,7 @@ public/audio/
 public/assets/
 src/generated/
 out
+build
 
 # IDE
 .vscode/

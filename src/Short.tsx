@@ -251,8 +251,8 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
         style={{
           position: "absolute",
           top: 82,
-          left: 64,
-          right: 64,
+          left: VIDEO_CONFIG.safeMargin.left,
+          right: VIDEO_CONFIG.safeMargin.right,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -314,9 +314,9 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
       <div
         style={{
           position: "absolute",
-          top: 245,
-          left: 66,
-          right: 60,
+          top: 335,
+          left: VIDEO_CONFIG.safeMargin.left,
+          right: VIDEO_CONFIG.safeMargin.right,
           display: "flex",
           alignItems: "center",
           gap: 14,
@@ -347,7 +347,7 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
       <div
         style={{
           position: "absolute",
-          right: 35,
+          right: VIDEO_CONFIG.safeMargin.right,
           top: 300,
           width: 180,
           height: 180,
@@ -387,9 +387,9 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
       <div
         style={{
           position: "absolute",
-          top: 20,
-          left: 62,
-          right: 42,
+          top: 450,
+          left: VIDEO_CONFIG.safeMargin.left,
+          right: VIDEO_CONFIG.safeMargin.right,
           opacity,
           transform: `translateY(${translateY}px) scale(${scale})`,
           transformOrigin: "left center",
@@ -475,9 +475,9 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
       <div
         style={{
           position: "absolute",
-          bottom: 145,
-          left: 66,
-          right: 66,
+          bottom: VIDEO_CONFIG.safeMargin.bottom - 220,
+          left: VIDEO_CONFIG.safeMargin.left,
+          right: VIDEO_CONFIG.safeMargin.right,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -485,7 +485,7 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
       >
         <div
           style={{
-            fontSize: 27,
+            fontSize: 37,
             color: C.muted,
             letterSpacing: 2,
           }}
@@ -507,9 +507,9 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
       <div
         style={{
           position: "absolute",
-          left: 66,
-          right: 66,
-          bottom: 105,
+          left: VIDEO_CONFIG.safeMargin.left,
+          right: VIDEO_CONFIG.safeMargin.right,
+          bottom: VIDEO_CONFIG.safeMargin.bottom - 280,
           height: 3,
           background: "rgba(255,255,255,0.15)",
           borderRadius: 10,

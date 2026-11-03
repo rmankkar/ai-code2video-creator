@@ -333,7 +333,7 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
         />
         <div
           style={{
-            fontSize: 48,
+            fontSize: 40,
             fontWeight: 700,
             letterSpacing: 3,
             color: C.cyan,
@@ -420,7 +420,7 @@ export const Short: React.FC<ShortProps> = ({ script, scriptPath, audioManifest 
             <div
               key={`${sceneIndex}-${line}`}
               style={{
-                fontSize: line.length > 11 ? 99 : 101,
+                fontSize: line.length > 11 ? 89 : 101,
                 fontWeight: 900,
                 lineHeight: 1.33,
                 letterSpacing: -2,

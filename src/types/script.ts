@@ -16,7 +16,7 @@ export const ScriptSceneSchema = z.object({
   endFrame: z.number().int().positive(),
   tag: z.string().min(1).max(50),
   kicker: z.string().min(1).max(60),
-  lines: z.array(z.string().min(1).max(15)).length(2),
+  lines: z.array(z.string().min(1).max(25)).length(2),
   description: z.string().min(1).max(120),
   narration: z.string().min(1).max(300), // ~5 seconds of speech
   accentLineIndex: z.number().int().min(0).max(1),

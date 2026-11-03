@@ -25,10 +25,22 @@ try {
   console.log("[Composition] No audio manifest found:", e);
 }
 
-// Default props — pass scriptPath so Short loads it at RUNTIME in browser
+// Load script at bundle time so Short.tsx renders updated content from script.json/script.ts
+let script: VideoScript | undefined;
+try {
+  const scriptPathAbs = resolve(__dirname, "generated/script.json");
+  const content = readFileSync(scriptPathAbs, "utf-8");
+  script = JSON.parse(content) as VideoScript;
+  console.log("[Composition] Loaded script from script.json, scenes:", script?.scenes?.length);
+} catch {
+  console.log("[Composition] No script.json found, will use scriptPath fallback");
+}
+
+// Default props — pass script directly so Short.tsx uses updated content
 const scriptPath = "./generated/script"; // resolves to generated/script.ts module
 const defaultProps: CompositionProps = {
   scriptPath,
+  script,
   audioManifest,
 };
 

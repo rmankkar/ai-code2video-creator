@@ -1,47 +1,100 @@
 #!/usr/bin/env tsx
 /**
  * CLI: Generate Audio Narration from Script
- * Uses macOS `say` + ffmpeg (free, offline)
+ * Cross-platform TTS: macOS (say), Windows (SAPI), Linux (espeak)
+ * Free, offline, built-in text-to-speech on all platforms
  * Usage: npm run generate:audio [script.json]
  */
 
 import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
-import { generateAudioForScript, generateCaptions, checkDependencies } from '../services/ttsGenerator.js';
+import { generateAudioForScript, generateCaptions, checkDependencies, getAvailableVoices } from '../services/ttsGenerator.js';
 import { validateScript } from '../types/script.js';
 
-async function main() {
-  const args = process.argv.slice(2);
+function printHelp() {
+  const platform = process.platform;
+  const platformNames: Record<string, string> = {
+    darwin: 'macOS (say)',
+    win32: 'Windows (SAPI)',
+    linux: 'Linux (espeak)',
+  };
+  const ttsEngine = platformNames[platform] || platform;
 
-  if (args.includes('--help') || args.includes('-h')) {
-    console.log(`
+  console.log(`
 Usage: npm run generate:audio [script.json] [options]
 
 Arguments:
   script.json             Path to script JSON (default: src/generated/script.json)
 
 Options:
-  --voice, -v             macOS voice name (default: Samantha)
-  --rate, -r              Speech rate in words/min (default: 200)
+  --voice, -v             Voice name (default: platform-specific)
+  --rate, -r              Speech rate in words/min (default: 165)
   --output-dir, -o        Audio output directory (default: public/audio)
+  --list-voices           List available voices for current platform
   --help, -h              Show this help
 
 Examples:
   npm run generate:audio
-  npm run generate:audio src/generated/script.json --voice Alex --rate 180
+  npm run generate:audio src/generated/script.json --voice "Microsoft Zira Desktop" --rate 180
+  npm run generate:audio --list-voices
 
 Prerequisites:
-  - macOS (for 'say' command)
-  - ffmpeg (brew install ffmpeg)
+  - ffmpeg (install from https://ffmpeg.org/download.html)
+  - ${ttsEngine} (built-in on all supported platforms)
+
+Platform-specific notes:
+  macOS:   Uses 'say' command. Voices: say -v '?'
+  Windows: Uses built-in SAPI. Voices: Microsoft David Desktop, Microsoft Zira Desktop
+  Linux:   Uses espeak. Install: sudo apt install espeak
+
+Environment variables:
+  TTS_VOICE   Default voice name
+  TTS_RATE    Default speech rate (words per minute)
 `);
+  process.exit(0);
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+
+  if (args.includes('--help') || args.includes('-h')) {
+    printHelp();
+  }
+
+  // Handle --list-voices
+  if (args.includes('--list-voices')) {
+    console.log(`\n🎤 Available voices for ${process.platform}:`);
+    const voices = getAvailableVoices();
+    if (voices.length === 0) {
+      console.log('   (none found - check TTS installation)');
+    } else {
+      voices.forEach(v => console.log(`   - ${v}`));
+    }
+    console.log('');
     process.exit(0);
   }
 
   // Check dependencies
   const deps = checkDependencies();
-  if (!deps.ffmpeg || !deps.say || !deps.ffprobe) {
-    console.error('\n❌ Missing required dependencies. Install with:');
-    console.error('   brew install ffmpeg');
+
+  if (!deps.ffmpeg || !deps.ffprobe) {
+    console.error('\n❌ Missing required dependencies:');
+    if (!deps.ffmpeg) console.error('   - ffmpeg not found. Install from: https://ffmpeg.org/download.html');
+    if (!deps.ffprobe) console.error('   - ffprobe not found (comes with ffmpeg)');
+    console.error(`\n   Platform: ${deps.platform}`);
+    process.exit(1);
+  }
+
+  if (!deps.tts) {
+    console.error('\n❌ Text-to-speech engine not available:');
+    if (process.platform === 'darwin') {
+      console.error('   - "say" command not found (should be built-in on macOS)');
+    } else if (process.platform === 'linux') {
+      console.error('   - espeak not found. Install: sudo apt install espeak');
+    } else {
+      console.error(`   - No TTS engine found for ${process.platform}`);
+    }
+    console.error(`\n   Platform: ${deps.platform}`);
     process.exit(1);
   }
 
@@ -67,11 +120,11 @@ Prerequisites:
     const script = validateScript(JSON.parse(scriptContent));
 
     interface TTSOptionsInput {
-  voice?: string;
-  rate?: number;
-  outputDir: string;
-  scriptTitle: string;
-}
+      voice?: string;
+      rate?: number;
+      outputDir: string;
+      scriptTitle: string;
+    }
     const ttsOptions: TTSOptionsInput = {
       outputDir: outputDir || resolve('public/audio'),
       scriptTitle: script.title,

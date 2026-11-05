@@ -130,12 +130,48 @@ TTS_RATE=200
 | `npm run build` | 📦 Bundle for production |
 | `npx remotion render PixelPulseShort out.mp4 --enforce-audio-track` | 🎬 Render final MP4 |
 | `npm run lint` | 🔍 ESLint + TypeScript check |
+| `npm run upload:drive [topic] [options]` | ☁️ Upload to Google Drive |
+| `npm run upload:drive:test` | ☁️ Test Google Drive connection |
 
 ### Quick Start (One-liner)
 
 ```bash
 npm run generate:all "AI in Gaming" && npx remotion render PixelPulseShort output/my-video.mp4 --enforce-audio-track
 ```
+
+### Google Drive Upload
+
+Upload generated content (script, audio, video) to Google Drive:
+
+```bash
+# Test connection
+npm run upload:drive:test
+
+# Upload all (script + audio + video) for a topic
+npm run upload:drive "AI Test Automation" --all --video out/video.mp4
+
+# Upload script only
+npm run upload:drive "My Topic" --script
+
+# Upload audio only
+npm run upload:drive "My Topic" --audio
+
+# Upload video only
+npm run upload:drive "My Topic" --video out/video.mp4
+
+# Upload to specific parent folder
+npm run upload:drive "My Topic" --all --video out/video.mp4 --parent-folder 1abc2def...
+
+# Upload without timestamp in folder name
+npm run upload:drive "My Topic" --all --video out/video.mp4 --no-timestamp
+```
+
+**Upload creates:** A folder named `{topic}_{timestamp}` under the parent folder, containing:
+- Script: `script.json`, `script.ts`, `composition-config.json`
+- Audio: `audio-manifest.json`, `captions.vtt`, audio segment files
+- Video: `video.mp4` (or your rendered file)
+
+[Google Drive Setup](#-google-drive-setup) below for authentication details.
 
 ---
 
@@ -275,6 +311,7 @@ Update `VIDEO_CONFIG` and `VideoScript` schema — all dimensions flow from ther
 | NIM API 401/429 | Check `.env` key, verify quota at NVIDIA dashboard |
 | TypeScript errors on `fs`/`path` | Ensure imports only in Node-only files (CLI, Composition.tsx) |
 | Green banner shows `FALLBACK` | `generate:script` + `generate:audio` not run, or config stale |
+| Google Drive upload fails | Verify OAuth2 credentials, check folder permissions, ensure refresh token is valid |
 
 ### Debug Checklist
 
@@ -291,6 +328,100 @@ cat src/generated/audio-manifest.json | jq '.segments | length'  # Should be 4
 # 4. Test render with verbose output
 npx remotion render PixelPulseShort out.mp4 --enforce-audio-track --log-level verbose
 ```
+
+---
+
+## ☁️ Google Drive Setup
+
+The upload feature uses **OAuth2** authentication (recommended for personal use) or **Service Account** (for CI/CD).
+
+### Option 1: OAuth2 (Personal Use)
+
+1. **Create OAuth 2.0 Credentials:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select existing
+   - Enable **Google Drive API**
+   - Go to **APIs & Services** → **Credentials** → **Create Credentials** → **OAuth client ID**
+   - Application type: **Desktop app**
+   - Note down **Client ID** and **Client Secret**
+
+2. **Get Refresh Token:**
+   ```bash
+   # Generate auth URL (run in Node.js)
+   node -e "
+   const {google} = require('googleapis');
+   const oauth2Client = new google.auth.OAuth2(
+     'YOUR_CLIENT_ID',
+     'YOUR_CLIENT_SECRET',
+     'http://localhost:3000/oauth2callback'
+   );
+   const url = oauth2Client.generateAuthUrl({
+     access_type: 'offline',
+     scope: ['https://www.googleapis.com/auth/drive.file'],
+     prompt: 'consent'
+   });
+   console.log(url);
+   "
+   ```
+   - Visit the printed URL in browser
+   - Sign in and grant permission
+   - Copy the `code` parameter from the redirect URL (e.g., `http://localhost:3000/oauth2callback?code=4/0AWg...`)
+
+3. **Exchange Code for Refresh Token:**
+   ```bash
+   node -e "
+   const {google} = require('googleapis');
+   const oauth2Client = new google.auth.OAuth2(
+     'YOUR_CLIENT_ID',
+     'YOUR_CLIENT_SECRET',
+     'http://localhost:3000/oauth2callback'
+   );
+   oauth2Client.getToken('YOUR_AUTH_CODE').then(({tokens}) => {
+     console.log('REFRESH_TOKEN:', tokens.refresh_token);
+   });
+   "
+   ```
+
+4. **Configure `.env`:**
+   ```bash
+   GOOGLE_DRIVE_AUTH_TYPE=oauth2
+   GOOGLE_DRIVE_CLIENT_ID=your_client_id
+   GOOGLE_DRIVE_CLIENT_SECRET=your_client_secret
+   GOOGLE_DRIVE_REFRESH_TOKEN=your_refresh_token
+   GOOGLE_DRIVE_PARENT_FOLDER_ID=your_parent_folder_id  # Optional
+   ```
+
+5. **Create Parent Folder (Optional):**
+   - Create a folder in Google Drive (e.g., "AI Video Output")
+   - Get folder ID from URL: `https://drive.google.com/drive/folders/FOLDER_ID_HERE`
+   - Share folder with your OAuth2 account (it's your account, so automatic)
+
+### Option 2: Service Account (CI/CD / Automation)
+
+1. **Create Service Account:**
+   - In Google Cloud Console → **IAM & Admin** → **Service Accounts** → **Create Service Account**
+   - Grant **Editor** role (or custom role with Drive permissions)
+   - Create **JSON Key** → Download and save as `google-service-account.json` in project root
+
+2. **Share Drive Folder with Service Account:**
+   - In Google Drive, right-click your parent folder → **Share**
+   - Add service account email (e.g., `my-svc@project.iam.gserviceaccount.com`)
+   - Give **Editor** access
+
+3. **Configure `.env`:**
+   ```bash
+   GOOGLE_DRIVE_AUTH_TYPE=service_account
+   GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH=./google-service-account.json
+   GOOGLE_DRIVE_PARENT_FOLDER_ID=your_parent_folder_id
+   ```
+
+### Test Connection
+
+```bash
+npm run upload:drive:test
+```
+
+Should output: `✅ Connected to Google Drive successfully`
 
 ---
 

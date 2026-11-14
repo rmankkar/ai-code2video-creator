@@ -23,7 +23,7 @@
 
 | Input | Output |
 |-------|--------|
-| A **topic string** (e.g., `"AI in Gaming"`) | **MP4 video** (1080×1920, 30fps, 20s) with:<br>• 4 animated scenes<br>• Kinetic typography<br>• Synchronized narration audio<br>• WebVTT captions |
+| A **topic string** (e.g., `"AI in Gaming"`) | **MP4 video** (1080×1920, 30fps, 20s) with:<br>• 4 animated scenes<br>• Kinetic typography<br>• Synchronized narration audio<br>• WebVTT captions<br>• **YouTube Shorts metadata** (title, description, tags, pinned comment) |
 
 **Zero manual editing** — the entire pipeline runs from CLI:
 
@@ -31,7 +31,9 @@
 cd video
 npm run generate:script "AI in Gaming"   # 1️⃣ LLM writes structured script
 npm run generate:audio                   # 2️⃣ macOS `say` + ffmpeg → audio + captions
-npx remotion render PixelPulseShort out.mp4 --enforce-audio-track  # 3️⃣ Remotion renders final video
+npm run generate:metadata                # 3️⃣ NVIDIA NIM → YouTube metadata
+npx remotion render PixelPulseShort out.mp4 --enforce-audio-track  # 4️⃣ Remotion renders final video
+npm run upload:drive "My Topic" --all --video out/video.mp4  # 5️⃣ Upload to Google Drive (optional)
 ```
 
 ---
@@ -54,6 +56,11 @@ flowchart LR
     J --> K
     K --> L[npx remotion render]
     L --> M[final.mp4 ✨]
+    C --> N[generate:metadata CLI]
+    N --> O[youtube-metadata.json + .txt]
+    M --> P[upload:drive CLI]
+    O --> P
+    P --> Q[Google Drive ☁️]
 ```
 
 ### Key Design Decisions
@@ -107,7 +114,7 @@ say "Hello world"  # Should speak
 ### .env.example
 
 ```bash
-# NVIDIA NIM (required for script generation)
+# NVIDIA NIM (required for script generation + metadata)
 NVIDIA_NIM_API_KEY=
 NVIDIA_NIM_BASE_URL=https://integrate.api.nvidia.com/v1
 NVIDIA_NIM_MODEL=nvidia/nemotron-3-ultra-550b-a55b
@@ -115,6 +122,26 @@ NVIDIA_NIM_MODEL=nvidia/nemotron-3-ultra-550b-a55b
 # Optional TTS overrides
 TTS_VOICE=Samantha
 TTS_RATE=200
+
+# Google Drive (optional - for upload:drive)
+# Auth type: oauth2 (personal) or service_account (CI/CD)
+GOOGLE_DRIVE_AUTH_TYPE=oauth2
+GOOGLE_DRIVE_ENABLED=true
+
+# OAuth2 Configuration
+GOOGLE_DRIVE_CLIENT_ID=your_client_id_here
+GOOGLE_DRIVE_CLIENT_SECRET=your_client_secret_here
+GOOGLE_DRIVE_REFRESH_TOKEN=your_refresh_token_here
+GOOGLE_DRIVE_REDIRECT_URI=http://localhost:3000/oauth2callback
+
+# Service Account Configuration (alternative)
+# GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH=./google-service-account.json
+# GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+
+# Parent folder in Google Drive (where topic folders will be created)
+GOOGLE_DRIVE_PARENT_FOLDER_ID=your_parent_folder_id_here
+# Alternative: parent folder name
+# GOOGLE_DRIVE_PARENT_FOLDER_NAME=ai-code2video-output
 ```
 
 ---
@@ -126,7 +153,8 @@ TTS_RATE=200
 | `npm run dev` | 🎞 Open Remotion Studio (live preview) |
 | `npm run generate:script "topic"` | 🤖 Generate script via NVIDIA NIM |
 | `npm run generate:audio` | 🎙 Generate narration + captions |
-| `npm run generate:all "topic"` | 🔄 Run both steps above |
+| `npm run generate:metadata` | 📊 Generate YouTube Shorts metadata |
+| `npm run generate:all "topic"` | 🔄 Run script + audio + metadata |
 | `npm run build` | 📦 Bundle for production |
 | `npx remotion render PixelPulseShort out.mp4 --enforce-audio-track` | 🎬 Render final MP4 |
 | `npm run lint` | 🔍 ESLint + TypeScript check |
@@ -136,7 +164,41 @@ TTS_RATE=200
 ### Quick Start (One-liner)
 
 ```bash
+# Full pipeline: script + audio + metadata + render
 npm run generate:all "AI in Gaming" && npx remotion render PixelPulseShort output/my-video.mp4 --enforce-audio-track
+
+# With Google Drive upload
+npm run generate:all "AI in Gaming" && npx remotion render PixelPulseShort output/my-video.mp4 --enforce-audio-track && npm run upload:drive "AI in Gaming" --all --video output/my-video.mp4
+```
+
+### YouTube Shorts Metadata
+
+Generate optimized YouTube metadata (title, description, tags, pinned comment) from your script:
+
+```bash
+# Generate metadata for existing script
+npm run generate:metadata
+
+# Custom audience: gamers | tech | general | casual
+npm run generate:metadata -- --audience tech
+
+# Custom topic + instructions
+npm run generate:metadata -- --topic "AI in Gaming" --custom-prompt "Focus on controversy"
+
+# Just print to console
+npm run generate:metadata -- --no-save
+```
+
+**Output Files:**
+- `src/generated/youtube-metadata.json` — Structured (for automation)
+- `src/generated/youtube-metadata.txt` — Human-readable (copy-paste ready)
+
+**Example Output:**
+```
+📝 TITLE: You Don't Own Your Games: The Legal Trick Publishers Hide
+📄 DESCRIPTION: You paid $70, but you don't own it... #Shorts #Gaming #DigitalOwnership #DRM...
+🏷️ TAGS: gaming, digital ownership, DRM, Ubisoft, The Crew, GOG, game preservation...
+💬 FIRST COMMENT: Hot take: If a game requires always-online for single-player, it's a rental...
 ```
 
 ### Google Drive Upload
@@ -241,7 +303,9 @@ video/
 ├── src/
 │   ├── cli/
 │   │   ├── generateScript.ts      # NVIDIA NIM → script.json/.ts
-│   │   └── generateAudio.ts       # macOS say + ffmpeg → audio/
+│   │   ├── generateAudio.ts       # macOS say + ffmpeg → audio/
+│   │   ├── generateMetadata.ts    # NIM → YouTube metadata
+│   │   └── uploadToDrive.ts       # Google Drive upload
 │   ├── components/
 │   │   └── AudioPlayer.tsx        # Frame-synced audio playback
 │   ├── config/
@@ -253,12 +317,19 @@ video/
 │   │   ├── audio-manifest.json / .ts
 │   │   ├── composition-config.json
 │   │   ├── captions.vtt
+│   │   ├── youtube-metadata.json  # YouTube Shorts metadata
+│   │   ├── youtube-metadata.txt   # Human-readable metadata
 │   │   └── audio/*.mp3
 │   ├── services/
 │   │   ├── scriptGenerator.ts     # NIM chat completion + validation
-│   │   └── ttsGenerator.ts        # TTS orchestration
+│   │   ├── ttsGenerator.ts        # TTS orchestration
+│   │   ├── googleDrive.ts         # Google Drive API service
+│   │   ├── uploadManager.ts       # Upload orchestration
+│   │   └── metadataGenerator.ts   # YouTube metadata generation
 │   ├── types/
-│   │   └── script.ts              # Zod schemas (VideoScript, AudioManifest…)
+│   │   ├── script.ts              # Zod schemas (VideoScript, AudioManifest…)
+│   │   ├── googleDrive.ts         # Google Drive types
+│   │   └── metadata.ts            # YouTube metadata types
 │   ├── Composition.tsx            # Bundle-time metadata (calculateMetadata)
 │   ├── Root.tsx                   # Remotion entry point (registers Composition)
 │   ├── Short.tsx                  # Main video component
@@ -312,6 +383,7 @@ Update `VIDEO_CONFIG` and `VideoScript` schema — all dimensions flow from ther
 | TypeScript errors on `fs`/`path` | Ensure imports only in Node-only files (CLI, Composition.tsx) |
 | Green banner shows `FALLBACK` | `generate:script` + `generate:audio` not run, or config stale |
 | Google Drive upload fails | Verify OAuth2 credentials, check folder permissions, ensure refresh token is valid |
+| Metadata generation fails | Check NVIDIA_NIM_API_KEY, verify .env loaded, check NIM quota |
 
 ### Debug Checklist
 
@@ -439,6 +511,8 @@ MIT License — see [LICENSE](../LICENSE) for details.
 - **NVIDIA NIM** — Nemotron 3 Ultra for structured generation
 - **Zod** — TypeScript-first schema validation
 - **macOS `say`** — Surprisingly great free TTS
+- **Google Drive API** — Cloud storage for generated content
+- **googleapis** — Node.js client for Google APIs
 
 ---
 

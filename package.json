@@ -38,7 +38,7 @@
     "generate:script": "tsx src/cli/generateScript.ts",
     "generate:audio": "tsx src/cli/generateAudio.ts",
     "generate:metadata": "tsx src/cli/generateMetadata.ts",
-    "generate:all": "npm run generate:script && npm run generate:audio && npm run generate:metadata",
+    "generate:all": "tsx src/cli/generateAll.ts",
     "upload:drive": "tsx src/cli/uploadToDrive.ts",
     "upload:drive:test": "tsx src/cli/uploadToDrive.ts -- --test"
   },

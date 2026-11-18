@@ -31,13 +31,13 @@ export interface TTSOptions {
 // Platform-specific default voices
 const DEFAULT_VOICES = {
   darwin: 'Samantha',
-  win32: 'Microsoft David Desktop',
+  win32: 'Microsoft Zira Desktop',
   linux: 'en_US',
 };
 
 const DEFAULT_TTS_OPTIONS: TTSOptions = {
   voice: process.env.TTS_VOICE || DEFAULT_VOICES[process.platform as keyof typeof DEFAULT_VOICES] || 'Samantha',
-  rate: parseInt(process.env.TTS_RATE || '165', 10),
+  rate: parseInt(process.env.TTS_RATE || '160', 10),
   outputDir: resolve('public/audio'),
   scriptTitle: 'generated',
   enablePostProcessing: true,
